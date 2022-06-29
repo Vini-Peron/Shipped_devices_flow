@@ -123,7 +123,7 @@ def data_dump(orders_sn_dict, activation_date_range):
     # pre-process new orders dict before dumping onto gsheet
     new_orders_df = pd.DataFrame(orders_sn_dict_copy).T
     new_orders_df = new_orders_df.reset_index()
-    activation_period = datetime.today() + timedelta(days=activation_date_range)  # change 14 days to 10 days (email follow up after 3 days if no response.)
+    activation_period = datetime.today() + timedelta(days=activation_date_range)
     new_orders_df['Activate By'] = str(activation_period)[:10]
     new_orders_df.reset_index(inplace=True, drop=True)
     if len(new_orders_df.index) > 0:
@@ -146,7 +146,7 @@ def data_dump(orders_sn_dict, activation_date_range):
         sh.update([orders_df.columns.values.tolist()] + orders_df.values.tolist())
     else:
         print("No records to dump")
-    print("Data Dump complete.")
+    print("### Data Dump complete. ###")
 
 
 def manage_orders_list(orders_sn_dict):
@@ -157,22 +157,30 @@ def manage_orders_list(orders_sn_dict):
     clean_orders = pd.concat([completed_orders_df, new_complete_orders_df], axis=0)
     clean_orders = clean_orders.reset_index(drop=True).drop_duplicates()
     pd.DataFrame(clean_orders).to_csv(COMPLETED_ORDERS_PATH, mode='w')
-    print("Completed Orders Updated.")
+    print("### Completed Orders Updated. ###")
     #TODO review process, add tests, eventually migrate from csv to sql
 
 
 def main():
-    from_date, to_date = get_order_date_range(28)  # range of days to filter from present day
-    print(f"Dates range From: {from_date}, To: {to_date}")
+    """
+    Main control panel for all functions:
+    get_order_date_range(int) number of days to dateback from current date. 
+    It's important to keep this number low to avoid exceeding API limit. (7 days exceeded)
+    get_all_orders() is the initial API call that fetches all order data. However, at this stage we are only concerned about order numbers.
+    prep_orders_list(all_orders_raw) formats the order list cleaning order # formats that are not relevant i.e RMAs
+
+    """
+    from_date, to_date = get_order_date_range(4)  # range of days to filter from present day
+    print(f"# Data Range - From: {from_date}, To: {to_date} #")
     order_stages = [0, 1, 3]
     for ord_stage in order_stages:
-        print(f'calling order status: {ord_stage}')
+        print(f'#### Calling Orders With Status: {ord_stage} ####')
         all_orders_raw = get_all_orders(
             DCL_LOGIN, DCL_PASSWORD,
             from_date, to_date, 
             order_status=ord_stage
             )
-        raw_df = prep_orders_list(all_orders_raw)
+        raw_df = prep_orders_list(all_orders_raw)  # returns a DataFrame
         raw_orders_list = raw_df['Order #'].apply(filter_order_num)
         clean_new_orders = clean_orders_list(raw_orders_list)
         if len(clean_new_orders) > 0:
@@ -181,27 +189,32 @@ def main():
                 data_dump(new_orders_dict, activation_date_range=14)  # completed orders to gsheet
                 manage_orders_list(new_orders_dict)  # completed orders to file
             else:
-                print('No orders to update.')
+                print('- No orders to update.')
         else:
-            print('No orders to complete.')
+            print('- No orders to complete.')
 
 
 if __name__ == "__main__":
     current_time = get_current_datetime()
-    print(f'Initiated loop {current_time}')
+    print(f'LOOP INITIATED AT {current_time}')
     try:
         while True:
-            current_time = get_current_datetime()
-            print(f"Clock-check at {current_time}")
-            if current_time == '08:00' or current_time == '20:00':  #TODO check only hour-digits so it can sleep for an hour.
+            loop_time = get_current_datetime()
+            next_run = datetime.now() + timedelta(seconds=3600)
+            print(f"Clock-check at {loop_time}")
+            if str(loop_time)[0:2] == '08' or str(loop_time)[0:2] == '13':  #checks only the hour of day once an hour.
                 main()
-                sleep(60)  # run the programm only once 
+                print(f"Next run at {next_run}")
+                sleep(3600)  # sleeps an hour after it runs. 
             else:
-                sleep(60)  # check every minute if its time to run
+                print(f"Next run at {next_run}")
+                sleep(3600)  # sleeps an hour after it doesn't run.
+            
+            
     except KeyboardInterrupt:
         print('loop terminated')
 
-#TODO fetch open orders and start a pending orders checklist to be checked again on the next run.
+#TODO fetch open orders and start a pending orders checklist to be checked again on the next run. implement SQL (SQLight)
 #TODO write tests
 #TODO package code (packgenlite?)
 #TODO write docs
