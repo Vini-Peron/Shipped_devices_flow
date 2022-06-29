@@ -160,10 +160,10 @@ def manage_orders_list(orders_sn_dict):
     print("Completed Orders Updated.")
     #TODO review process, add tests, eventually migrate from csv to sql
 
+
 def main():
     from_date, to_date = get_order_date_range(28)  # range of days to filter from present day
     print(f"Dates range From: {from_date}, To: {to_date}")
-
     order_stages = [0, 1, 3]
     for ord_stage in order_stages:
         print(f'calling order status: {ord_stage}')
