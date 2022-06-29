@@ -11,14 +11,14 @@ import gspread
 from params.secrets import DCL_LOGIN, DCL_PASSWORD
 
 
+COMPLETED_ORDERS_PATH = 'completed_hsb_orders_test.csv'
+
 logging.basicConfig(
     filename='data/sn_logger_v2.log', 
     filemode='a', 
     format='%(asctime)s %(message)s', 
     level=logging.INFO
     )
-
-COMPLETED_ORDERS_PATH = 'completed_hsb_orders_test.csv'
 
 
 def get_order_date_range(range): 
@@ -32,7 +32,7 @@ def get_current_datetime():
     return str(time_now)[11:16]
 
 
-def get_all_orders(username, password, from_date, to_date, order_status=0):
+def get_all_orders(username, password, from_date, to_date, order_status):
     """
     DCL API call to fetch order details
     received_from 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM:SS'.
@@ -48,7 +48,6 @@ def get_all_orders(username, password, from_date, to_date, order_status=0):
     raw_data = []
     order_params = {'status':order_status, 'received_from':from_date, 'received_to':to_date}
     # both 'x-test' and 'x-test2' are sent
-
     r = s.get(
         'https://api.dclcorp.com/api/v1/orders', 
         headers={'x-test2': 'true'}, 
@@ -88,7 +87,7 @@ def collect_order_data(all_orders_raw, orders_list):
                     }
             except TypeError:
                 print(f"No S/N assigned for order # {order_number}")
-               
+
     for key, value in orders_dict.items():
         # even out dict values' length before we turn it into a df and dump the data
         if len(value['serial_numbers']) == 1:
@@ -105,6 +104,7 @@ def prep_orders_list(all_orders_raw):
         for order in order_dict['orders']:
             order_number = order['order_number']
             all_order_numbers_within_range.append(order_number)
+
     #logging.info(f'all orders fetched - {all_order_numbers_within_range}')  #debugger
     raw_df = pd.DataFrame(all_order_numbers_within_range)
     raw_df.columns = ['Order #']
@@ -193,10 +193,15 @@ if __name__ == "__main__":
         while True:
             current_time = get_current_datetime()
             print(f"Clock-check at {current_time}")
-            if current_time == '08:00' or current_time == '09:34':  #TODO check only hour-digits so it can sleep for an hour
+            if current_time == '08:00' or current_time == '20:00':  #TODO check only hour-digits so it can sleep for an hour.
                 main()
                 sleep(60)  # run the programm only once 
             else:
                 sleep(60)  # check every minute if its time to run
     except KeyboardInterrupt:
         print('loop terminated')
+
+#TODO fetch open orders and start a pending orders checklist to be checked again on the next run.
+#TODO write tests
+#TODO package code (packgenlite?)
+#TODO write docs

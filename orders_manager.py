@@ -9,6 +9,7 @@ import gspread
 
 from params.secrets import DCL_LOGIN, DCL_PASSWORD
 
+
 pd.set_option('display.max_columns', None)
 logging.basicConfig(filename='sn_logger.log', filemode='a', format='%(asctime)s %(message)s', level=logging.INFO)
 
@@ -21,7 +22,7 @@ def scan_order_num(order_num):
     return re.findall(r'D[\d]{5,7}-[\d]{10}-[a-zA-Z0-9]{3}', order_num)
 
 
-def scan_order_list(username, password, order_list):
+def fetch_order_details(username, password, order_list):
     """
     DCL API call to fetch order details  
     """
@@ -132,7 +133,7 @@ if __name__ == "__main__":
     print(new_orders_df)  # debbug/log new orders with status cli == orders to be checked
     #TODO check order date is not older than 4 days (ALERT LATE ORDER?)
     # FETCH ORDER DETAILS VIA DCL API
-    raw_order_data = scan_order_list(DCL_LOGIN, DCL_PASSWORD, clean_new_orders)
+    raw_order_data = fetch_order_details(DCL_LOGIN, DCL_PASSWORD, clean_new_orders)
     orders_sn_dict = collect_serial_numbers(raw_order_data)
     #print(orders_sn_dict)
     if len(orders_sn_dict.keys()) > 0:
