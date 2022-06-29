@@ -20,6 +20,7 @@ logging.basicConfig(
 
 COMPLETED_ORDERS_PATH = 'completed_hsb_orders_test.csv'
 
+
 def get_order_date_range(range): 
     to_date = datetime.today()
     from_date = to_date - timedelta(days=range)
