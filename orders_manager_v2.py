@@ -18,6 +18,7 @@ logging.basicConfig(
     level=logging.INFO
     )
 
+COMPLETED_ORDERS_PATH = 'completed_hsb_orders_test.csv'
 
 def get_order_date_range(range): 
     to_date = datetime.today()
@@ -111,7 +112,7 @@ def prep_orders_list(all_orders_raw):
 
 def clean_orders_list(raw_orders_list):
     new_orders = [i[0] for i in raw_orders_list if len(i) > 0]
-    completed_orders_list = pd.read_csv('data/completed_hsb_orders_test.csv')['0'].to_list()
+    completed_orders_list = pd.read_csv(COMPLETED_ORDERS_PATH)['0'].to_list()
     clean_new_orders = [ordn for ordn in new_orders if ordn not in completed_orders_list]
     return clean_new_orders
 
@@ -151,10 +152,10 @@ def manage_orders_list(orders_sn_dict):
     new_completed_orders = orders_sn_dict.keys()
     logging.info(f"Completed {list(new_completed_orders)}")
     new_complete_orders_df = pd.DataFrame(new_completed_orders)
-    completed_orders_df = pd.read_csv('data/completed_hsb_orders_test.csv')['0']
+    completed_orders_df = pd.read_csv(COMPLETED_ORDERS_PATH)['0']
     clean_orders = pd.concat([completed_orders_df, new_complete_orders_df], axis=0)
     clean_orders = clean_orders.reset_index(drop=True).drop_duplicates()
-    pd.DataFrame(clean_orders).to_csv('data/completed_hsb_orders_test.csv', mode='w')
+    pd.DataFrame(clean_orders).to_csv(COMPLETED_ORDERS_PATH, mode='w')
     print("Completed Orders Updated.")
     #TODO review process, add tests, eventually migrate from csv to sql
 
@@ -191,7 +192,7 @@ if __name__ == "__main__":
         while True:
             current_time = get_current_datetime()
             print(f"Clock-check at {current_time}")
-            if current_time == '14:42' or current_time == '14:46':
+            if current_time == '08:00' or current_time == '09:34':  #TODO check only hour-digits so it can sleep for an hour
                 main()
                 sleep(60)  # run the programm only once 
             else:
