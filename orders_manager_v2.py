@@ -8,7 +8,7 @@ import logging
 import pandas as pd
 import gspread
 
-from params.secrets import DCL_LOGIN, DCL_PASSWORD
+from params.secrets import DCL_LOGIN, DCL_PASSWORD, HSB_GOOGLE_SHEET
 
 
 COMPLETED_ORDERS_PATH = 'completed_hsb_orders_test.csv'
@@ -150,7 +150,7 @@ def data_dump(orders_sn_dict, activation_date_range):
         print(new_orders_df)
         # read in existing orders before merging new completed orders
         gc = gspread.service_account()
-        sh = gc.open('test_hsb_data_dump').sheet1  # TEST SHEET ON
+        sh = gc.open(HSB_GOOGLE_SHEET).sheet1  # TEST SHEET ON
         existing_orders = pd.DataFrame(sh.get_all_records())
         orders_df = pd.concat([existing_orders, new_orders_df])
         sh.update([orders_df.columns.values.tolist()] + orders_df.values.tolist())
@@ -212,7 +212,7 @@ if __name__ == "__main__":
             loop_time = get_current_datetime()
             next_run = datetime.now() + timedelta(seconds=3600)
             print(f"Clock-check at {loop_time}")
-            if str(loop_time)[0:2] == '08' or str(loop_time)[0:2] == '11':  #checks only the hour of day once an hour.
+            if str(loop_time)[0:2] == '08' or str(loop_time)[0:2] == '21':  # checks only the hour of day once an hour.
                 main()
                 print(f"Next run at {next_run}")
                 sleep(3600)  # sleeps an hour after it runs. 
@@ -222,7 +222,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print('loop terminated')
 
-#TODO implement SQL (SQLight)
-#TODO write tests
+#TODO replace csv with SQL (SQLight), data dump can then originate from sql table.
+#TODO write tests!!!
 #TODO package code (packgenlite?)
 #TODO write docs
