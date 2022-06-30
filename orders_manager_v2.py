@@ -14,7 +14,7 @@ from params.secrets import DCL_LOGIN, DCL_PASSWORD
 COMPLETED_ORDERS_PATH = 'completed_hsb_orders_test.csv'
 
 logging.basicConfig(
-    filename='data/sn_logger_v2.log', 
+    filename='sn_logger_v2.log', 
     filemode='a', 
     format='%(asctime)s %(message)s', 
     level=logging.INFO
@@ -72,13 +72,23 @@ def collect_order_data(all_orders_raw, orders_list):
     orders_dict = {}
     for order_dict in all_orders_raw:  # api call response
         for order in order_dict['orders']:
+            # print("### ORDER DICT DEBBUGER ###")
+            # print(order) #DEBUGGER
+            # print("### ORDER DICT DEBBUGER ###")
             order_number = order['order_number']
             try:
                 if order_number in orders_list:
                     stage_description = order['stage_description']
                     order_date = order['received_date']
                     email_address = list(order['shipping_address'].values())[4]
-                    serial_numbers = order['shipments'][0]['shipped_lines'][0]['serial_numbers']
+                    if order_number.endswith('DEV'):
+                        serial_numbers = order['shipments'][0]['shipped_lines'][0]['serial_numbers']
+                    else:
+                        shipped_lines = order['shipments'][0]['shipped_lines']
+                        serial_numbers = []
+                        for serial in shipped_lines:
+                            serial_numbers.append(serial['serial_numbers'][0])
+                    
                     orders_dict[order_number] = {
                     'order_date': order_date, 
                     'stage_description': stage_description,
@@ -104,7 +114,6 @@ def prep_orders_list(all_orders_raw):
         for order in order_dict['orders']:
             order_number = order['order_number']
             all_order_numbers_within_range.append(order_number)
-
     #logging.info(f'all orders fetched - {all_order_numbers_within_range}')  #debugger
     raw_df = pd.DataFrame(all_order_numbers_within_range)
     raw_df.columns = ['Order #']
@@ -129,6 +138,7 @@ def data_dump(orders_sn_dict, activation_date_range):
     if len(new_orders_df.index) > 0:
         new_orders_df['dev_string'] = [','.join(map(str, l)) for l in new_orders_df['serial_numbers']]
         new_orders_df[['dev_1', 'dev_2', 'dev_3']] = new_orders_df['dev_string'].str.split(',', expand=True)
+
         new_orders_df = new_orders_df.copy()
         new_orders_df.drop(
             ['serial_numbers', 'dev_string', 'order_date', 'stage_description'], 
@@ -172,7 +182,7 @@ def main():
     """
     from_date, to_date = get_order_date_range(4)  # range of days to filter from present day
     print(f"# Data Range - From: {from_date}, To: {to_date} #")
-    order_stages = [0, 1, 3]
+    order_stages = [0]
     for ord_stage in order_stages:
         print(f'#### Calling Orders With Status: {ord_stage} ####')
         all_orders_raw = get_all_orders(
@@ -202,19 +212,17 @@ if __name__ == "__main__":
             loop_time = get_current_datetime()
             next_run = datetime.now() + timedelta(seconds=3600)
             print(f"Clock-check at {loop_time}")
-            if str(loop_time)[0:2] == '08' or str(loop_time)[0:2] == '13':  #checks only the hour of day once an hour.
+            if str(loop_time)[0:2] == '08' or str(loop_time)[0:2] == '11':  #checks only the hour of day once an hour.
                 main()
                 print(f"Next run at {next_run}")
                 sleep(3600)  # sleeps an hour after it runs. 
             else:
                 print(f"Next run at {next_run}")
                 sleep(3600)  # sleeps an hour after it doesn't run.
-            
-            
     except KeyboardInterrupt:
         print('loop terminated')
 
-#TODO fetch open orders and start a pending orders checklist to be checked again on the next run. implement SQL (SQLight)
+#TODO implement SQL (SQLight)
 #TODO write tests
 #TODO package code (packgenlite?)
 #TODO write docs

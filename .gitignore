@@ -4,3 +4,4 @@ archive/
 __pycache__/
 completed_hsb_orders_test.csv
 sn_logger.log
+sn_logger_v2.log
