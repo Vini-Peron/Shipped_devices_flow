@@ -53,8 +53,10 @@ def get_all_orders(username, password, from_date:str, to_date:str, order_status:
         headers={'x-test2': 'true'}, 
         params=order_params,
         )
+    #TODO implement connection failure guard try/except or if/else
     data = r.json()
     raw_data.append(data)
+    
     return raw_data
 
 
@@ -108,30 +110,30 @@ def collect_order_data(all_orders_raw, orders_list):
     return orders_dict
 
 
-def prep_orders_list(all_orders_raw : list): 
+def prep_orders_list(all_orders_raw : list):  # list of order dictionaries
     all_order_numbers_within_range = []
     for order_dict in all_orders_raw:
         for order in order_dict['orders']:
             order_number = order['order_number']
             all_order_numbers_within_range.append(order_number)
     #logging.info(f'all orders fetched - {all_order_numbers_within_range}')  #debugger
-    raw_df = pd.DataFrame(all_order_numbers_within_range)
-    raw_df.columns = ['Order #']
-    return raw_df
+    raw_orders_df = pd.DataFrame(all_order_numbers_within_range)
+    raw_orders_df.columns = ['Order #']
+    return raw_orders_df
 
 
 def clean_orders_list(raw_orders_list_df):  # -> DataFrame
     new_orders = [i[0] for i in raw_orders_list_df if len(i) > 0]
-    completed_orders_list = pd.read_csv(COMPLETED_ORDERS_PATH)['0'].to_list()
-    clean_new_orders = [ordn for ordn in new_orders if ordn not in completed_orders_list]
+    completed_orders_list = pd.read_csv(COMPLETED_ORDERS_PATH)['0'].to_list()  # read completed orders
+    clean_new_orders = [ordn for ordn in new_orders if ordn not in completed_orders_list]  # remove completed orders
     return clean_new_orders
 
 
 def prep_data_dump(orders_sn_dict:dict, activation_date_range:int):
     """
-    TODO this functions needs to be broken down into smaller pieces (def pre_datadump)
+    TODO this functions needs to be broken down into smaller pieces
     deepcopy dict orders before turning dict into df, spliting SNs and adding Activate By column.
-    preping to match gsheet
+    preping to match hsb gsheet
     TODO append gsheet instead of read, merge and re-write
     (at this stage all checks are done, there should be no duplicates)
     """
@@ -168,6 +170,7 @@ def data_dump(new_orders_df):
     orders_df = pd.concat([existing_orders, new_orders_df])
     sh.update([orders_df.columns.values.tolist()] + orders_df.values.tolist())
     print("### Data Dump complete. ###")
+    #TODO return something here so it can be tested (what is vital at this stage?)
 
 
 def manage_orders_list(orders_sn_dict:dict):
@@ -183,6 +186,7 @@ def manage_orders_list(orders_sn_dict:dict):
     pd.DataFrame(clean_orders).to_csv(COMPLETED_ORDERS_PATH, mode='w')
     print("### Completed Orders Updated. ###")
     #TODO review process, add tests, eventually migrate from csv to sql
+    #TODO return something here so it can be tested (what is vital at this stage?)
 
 
 def main():
@@ -204,8 +208,8 @@ def main():
             from_date, to_date, 
             order_status=ord_stage
             )
-        raw_df = prep_orders_list(all_orders_raw)  # returns a DataFrame
-        raw_orders_list_df = raw_df['Order #'].apply(filter_order_num)
+        raw_ordernum_df = prep_orders_list(all_orders_raw)  # returns a DataFrame
+        raw_orders_list_df = raw_ordernum_df['Order #'].apply(filter_order_num)
         clean_new_orders = clean_orders_list(raw_orders_list_df)
         if len(clean_new_orders) > 0:
             new_orders_dict = collect_order_data(all_orders_raw, clean_new_orders)
@@ -228,7 +232,7 @@ if __name__ == "__main__":
             loop_time = get_current_datetime()
             next_run = datetime.now() + timedelta(seconds=3600)
             print(f"Clock-check at {loop_time}")
-            if str(loop_time)[0:2] == '08' or str(loop_time)[0:2] == '10':  # checks only the hour of day once an hour.
+            if str(loop_time)[0:2] == '08' or str(loop_time)[0:2] == '20':  # checks only the hour of day once an hour.
                 main()
                 print(f"Next run at {next_run}")
                 sleep(3600)  # sleeps an hour after it runs. 
@@ -239,6 +243,6 @@ if __name__ == "__main__":
         print('loop terminated')
 
 #TODO replace csv with SQL (SQLight), data dump can then originate from sql table.
-#TODO write tests!!!
+#TODO write tests!!!  (initial boilerplate implemented)
 #TODO package code (packgenlite?)
 #TODO write docs
