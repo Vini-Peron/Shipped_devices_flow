@@ -21,7 +21,7 @@ logging.basicConfig(
     )
 
 
-def get_order_date_range(range): 
+def get_order_date_range(range:int): 
     to_date = datetime.today()
     from_date = to_date - timedelta(days=range)
     return str(from_date)[:10], str(to_date)[:10]
@@ -32,7 +32,7 @@ def get_current_datetime():
     return str(time_now)[11:16]
 
 
-def get_all_orders(username, password, from_date, to_date, order_status):
+def get_all_orders(username, password, from_date:str, to_date:str, order_status:int):
     """
     DCL API call to fetch order details
     received_from 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM:SS'.
@@ -40,7 +40,7 @@ def get_all_orders(username, password, from_date, to_date, order_status):
     status == 0 returns orders in any status except cancelled. (default)
     status == 1 returns Open orders which never have SNs assigned
     status == 2 returns cancelled orders
-    status == 3 returns shipped orders (this seems to always return the same orders regardless)
+    status == 3 returns shipped orders
     """
     s = requests.Session()
     s.auth = (username, password)
@@ -98,8 +98,8 @@ def collect_order_data(all_orders_raw, orders_list):
             except TypeError:
                 print(f"No S/N assigned for order # {order_number}")
 
+    # padding SN list as prep for df
     for key, value in orders_dict.items():
-        # even out dict values' length before we turn it into a df and dump the data
         if len(value['serial_numbers']) == 1:
             value['serial_numbers'].append('None')
             value['serial_numbers'].append('None')
@@ -108,7 +108,7 @@ def collect_order_data(all_orders_raw, orders_list):
     return orders_dict
 
 
-def prep_orders_list(all_orders_raw): 
+def prep_orders_list(all_orders_raw : list): 
     all_order_numbers_within_range = []
     for order_dict in all_orders_raw:
         for order in order_dict['orders']:
@@ -120,14 +120,21 @@ def prep_orders_list(all_orders_raw):
     return raw_df
 
 
-def clean_orders_list(raw_orders_list):
-    new_orders = [i[0] for i in raw_orders_list if len(i) > 0]
+def clean_orders_list(raw_orders_list_df):  # -> DataFrame
+    new_orders = [i[0] for i in raw_orders_list_df if len(i) > 0]
     completed_orders_list = pd.read_csv(COMPLETED_ORDERS_PATH)['0'].to_list()
     clean_new_orders = [ordn for ordn in new_orders if ordn not in completed_orders_list]
     return clean_new_orders
 
 
-def data_dump(orders_sn_dict, activation_date_range):
+def prep_data_dump(orders_sn_dict:dict, activation_date_range:int):
+    """
+    TODO this functions needs to be broken down into smaller pieces (def pre_datadump)
+    deepcopy dict orders before turning dict into df, spliting SNs and adding Activate By column.
+    preping to match gsheet
+    TODO append gsheet instead of read, merge and re-write
+    (at this stage all checks are done, there should be no duplicates)
+    """
     orders_sn_dict_copy = copy.deepcopy(orders_sn_dict)
     # pre-process new orders dict before dumping onto gsheet
     new_orders_df = pd.DataFrame(orders_sn_dict_copy).T
@@ -148,18 +155,25 @@ def data_dump(orders_sn_dict, activation_date_range):
         new_orders_df.columns = ['order_#', 'email_addr', 'Activate By', 'dev_1', 'dev_2', 'dev_3']
         new_orders_df = new_orders_df[['order_#', 'dev_1', 'dev_2', 'dev_3', 'Activate By', 'email_addr']]
         print(new_orders_df)
-        # read in existing orders before merging new completed orders
-        gc = gspread.service_account()
-        sh = gc.open(HSB_GOOGLE_SHEET).sheet1  # TEST SHEET ON
-        existing_orders = pd.DataFrame(sh.get_all_records())
-        orders_df = pd.concat([existing_orders, new_orders_df])
-        sh.update([orders_df.columns.values.tolist()] + orders_df.values.tolist())
     else:
         print("No records to dump")
+        return False
+    return new_orders_df
+
+def data_dump(new_orders_df):
+    # read in existing orders before merging new completed orders
+    gc = gspread.service_account()
+    sh = gc.open(HSB_GOOGLE_SHEET).sheet1  # TEST SHEET ON
+    existing_orders = pd.DataFrame(sh.get_all_records())
+    orders_df = pd.concat([existing_orders, new_orders_df])
+    sh.update([orders_df.columns.values.tolist()] + orders_df.values.tolist())
     print("### Data Dump complete. ###")
 
 
-def manage_orders_list(orders_sn_dict):
+def manage_orders_list(orders_sn_dict:dict):
+    """
+    add newly completed orders to completed orders list.
+    """
     new_completed_orders = orders_sn_dict.keys()
     logging.info(f"Completed {list(new_completed_orders)}")
     new_complete_orders_df = pd.DataFrame(new_completed_orders)
@@ -191,12 +205,14 @@ def main():
             order_status=ord_stage
             )
         raw_df = prep_orders_list(all_orders_raw)  # returns a DataFrame
-        raw_orders_list = raw_df['Order #'].apply(filter_order_num)
-        clean_new_orders = clean_orders_list(raw_orders_list)
+        raw_orders_list_df = raw_df['Order #'].apply(filter_order_num)
+        clean_new_orders = clean_orders_list(raw_orders_list_df)
         if len(clean_new_orders) > 0:
             new_orders_dict = collect_order_data(all_orders_raw, clean_new_orders)
             if len(new_orders_dict.keys()) > 0:
-                data_dump(new_orders_dict, activation_date_range=14)  # completed orders to gsheet
+                df_data_dump = prep_data_dump(new_orders_dict, activation_date_range=14)
+                if df_data_dump:
+                    data_dump(df_data_dump)  # completed orders to gsheet
                 manage_orders_list(new_orders_dict)  # completed orders to file
             else:
                 print('- No orders to update.')
@@ -212,7 +228,7 @@ if __name__ == "__main__":
             loop_time = get_current_datetime()
             next_run = datetime.now() + timedelta(seconds=3600)
             print(f"Clock-check at {loop_time}")
-            if str(loop_time)[0:2] == '08' or str(loop_time)[0:2] == '21':  # checks only the hour of day once an hour.
+            if str(loop_time)[0:2] == '08' or str(loop_time)[0:2] == '10':  # checks only the hour of day once an hour.
                 main()
                 print(f"Next run at {next_run}")
                 sleep(3600)  # sleeps an hour after it runs. 

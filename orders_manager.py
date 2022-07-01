@@ -121,7 +121,7 @@ def data_dump(orders_sn_dict):
 
 if __name__ == "__main__":
     # GET NEW ORDERS FROM FILE, GET ORDERS LIST AND DataFrame OF ORDERS TO PROCESS ONLY
-    file_path = 'data/AllOrdersDCL30062022.csv'  #TODO input / argparse / fetch file directly via DCL API
+    file_path = 'data/AllOrdersDCL01072022.csv'  #TODO input / argparse / fetch file directly via DCL API
     raw_df = pd.read_csv(file_path)[['Order #', "Receipt Date", "Stage Description"]]  # file to df
     raw_orders_list = raw_df['Order #'].apply(scan_order_num)  # regex out hsb and dev orders only
     new_orders = [i[0] for i in raw_orders_list if len(i) > 0]  # clean order list into list of strings of order#s
