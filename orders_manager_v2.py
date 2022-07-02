@@ -53,10 +53,9 @@ def get_all_orders(username, password, from_date:str, to_date:str, order_status:
         headers={'x-test2': 'true'}, 
         params=order_params,
         )
-    #TODO implement connection failure guard try/except or if/else
+    #TODO guard connection failure try/except or if/else
     data = r.json()
     raw_data.append(data)
-    
     return raw_data
 
 
@@ -215,8 +214,7 @@ def main():
             new_orders_dict = collect_order_data(all_orders_raw, clean_new_orders)
             if len(new_orders_dict.keys()) > 0:
                 df_data_dump = prep_data_dump(new_orders_dict, activation_date_range=14)
-                if df_data_dump:
-                    data_dump(df_data_dump)  # completed orders to gsheet
+                data_dump(df_data_dump)  # completed orders to gsheet
                 manage_orders_list(new_orders_dict)  # completed orders to file
             else:
                 print('- No orders to update.')
@@ -232,7 +230,7 @@ if __name__ == "__main__":
             loop_time = get_current_datetime()
             next_run = datetime.now() + timedelta(seconds=3600)
             print(f"Clock-check at {loop_time}")
-            if str(loop_time)[0:2] == '08' or str(loop_time)[0:2] == '20':  # checks only the hour of day once an hour.
+            if str(loop_time)[0:2] == '13' or str(loop_time)[0:2] == '20':  # checks only the hour of day once an hour.
                 main()
                 print(f"Next run at {next_run}")
                 sleep(3600)  # sleeps an hour after it runs. 
