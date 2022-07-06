@@ -47,5 +47,6 @@ class TestOrdersManager_v2(unittest.TestCase):
         #self.assertIsNone(orders_manager_v2.manage_orders_list())  # needs an input
         pass
 
+
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main()  # allows file to be run as script directly from the terminal.

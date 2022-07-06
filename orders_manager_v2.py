@@ -98,7 +98,6 @@ def collect_order_data(all_orders_raw, orders_list):
                     }
             except TypeError:
                 print(f"No S/N assigned for order # {order_number}")
-
     # padding SN list as prep for df
     for key, value in orders_dict.items():
         if len(value['serial_numbers']) == 1:
@@ -146,7 +145,6 @@ def prep_data_dump(orders_sn_dict:dict, activation_date_range:int):
     if len(new_orders_df.index) > 0:
         new_orders_df['dev_string'] = [','.join(map(str, l)) for l in new_orders_df['serial_numbers']]
         new_orders_df[['dev_1', 'dev_2', 'dev_3']] = new_orders_df['dev_string'].str.split(',', expand=True)
-
         new_orders_df = new_orders_df.copy()
         new_orders_df.drop(
             ['serial_numbers', 'dev_string', 'order_date', 'stage_description'], 
@@ -161,15 +159,16 @@ def prep_data_dump(orders_sn_dict:dict, activation_date_range:int):
         return False
     return new_orders_df
 
+
 def data_dump(new_orders_df):
     # read in existing orders before merging new completed orders
-    gc = gspread.service_account()
+    gc = gspread.service_account(filename="params/service_account.json")
     sh = gc.open(HSB_GOOGLE_SHEET).sheet1  # TEST SHEET ON
     existing_orders = pd.DataFrame(sh.get_all_records())
     orders_df = pd.concat([existing_orders, new_orders_df])
     sh.update([orders_df.columns.values.tolist()] + orders_df.values.tolist())
     print("### Data Dump complete. ###")
-    #TODO return something here so it can be tested (what is vital at this stage?)
+    #TODO return something here for tests
 
 
 def manage_orders_list(orders_sn_dict:dict):
@@ -185,7 +184,7 @@ def manage_orders_list(orders_sn_dict:dict):
     pd.DataFrame(clean_orders).to_csv(COMPLETED_ORDERS_PATH, mode='w')
     print("### Completed Orders Updated. ###")
     #TODO review process, add tests, eventually migrate from csv to sql
-    #TODO return something here so it can be tested (what is vital at this stage?)
+    #TODO return something here so it can be tested
 
 
 def main():
@@ -195,11 +194,11 @@ def main():
     It's important to keep this number low to avoid exceeding API limit. (7 days exceeded)
     get_all_orders() is the initial API call that fetches all order data. However, at this stage we are only concerned about order numbers.
     prep_orders_list(all_orders_raw) formats the order list cleaning order # formats that are not relevant i.e RMAs
-
+    #TODO TBC
     """
     from_date, to_date = get_order_date_range(4)  # range of days to filter from present day
     print(f"# Data Range - From: {from_date}, To: {to_date} #")
-    order_stages = [0]
+    order_stages = [0]  # 0, 1, 2, 3
     for ord_stage in order_stages:
         print(f'#### Calling Orders With Status: {ord_stage} ####')
         all_orders_raw = get_all_orders(
@@ -230,7 +229,7 @@ if __name__ == "__main__":
             loop_time = get_current_datetime()
             next_run = datetime.now() + timedelta(seconds=3600)
             print(f"Clock-check at {loop_time}")
-            if str(loop_time)[0:2] == '13' or str(loop_time)[0:2] == '20':  # checks only the hour of day once an hour.
+            if str(loop_time)[0:2] == '09' or str(loop_time)[0:2] == '20':  # checks only the hour of day once an hour.
                 main()
                 print(f"Next run at {next_run}")
                 sleep(3600)  # sleeps an hour after it runs. 
