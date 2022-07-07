@@ -162,7 +162,7 @@ def prep_data_dump(orders_sn_dict:dict, activation_date_range:int):
 
 def data_dump(new_orders_df):
     # read in existing orders before merging new completed orders
-    gc = gspread.service_account(filename="params/service_account.json")
+    gc = gspread.service_account(filename="params/service_account.json")  # can be passed as dict.
     sh = gc.open(HSB_GOOGLE_SHEET).sheet1  # TEST SHEET ON
     existing_orders = pd.DataFrame(sh.get_all_records())
     orders_df = pd.concat([existing_orders, new_orders_df])
@@ -229,7 +229,7 @@ if __name__ == "__main__":
             loop_time = get_current_datetime()
             next_run = datetime.now() + timedelta(seconds=3600)
             print(f"Clock-check at {loop_time}")
-            if str(loop_time)[0:2] == '09' or str(loop_time)[0:2] == '20':  # checks only the hour of day once an hour.
+            if str(loop_time)[0:2] == '10' or str(loop_time)[0:2] == '20':  # checks only the hour of day once an hour.
                 main()
                 print(f"Next run at {next_run}")
                 sleep(3600)  # sleeps an hour after it runs. 
