@@ -70,8 +70,10 @@ def filter_order_num(order_num):
 
 
 def collect_order_data(all_orders_raw, orders_list):
+    logging.info(f'{len(orders_list)} order(s) checked.')
+    print(f'{len(orders_list)} order(s) to check.')
     orders_dict = {}
-    for order_dict in all_orders_raw:  # api call response
+    for order_dict in all_orders_raw:
         for order in order_dict['orders']:
             # print("### ORDER DICT DEBBUGER ###")
             # print(order) #DEBUGGER
@@ -229,7 +231,7 @@ if __name__ == "__main__":
             loop_time = get_current_datetime()
             next_run = datetime.now() + timedelta(seconds=3600)
             print(f"Clock-check at {loop_time}")
-            if str(loop_time)[0:2] == '10' or str(loop_time)[0:2] == '20':  # checks only the hour of day once an hour.
+            if str(loop_time)[0:2] == '10' or str(loop_time)[0:2] == '23':  # checks only the hour of day once an hour.
                 main()
                 print(f"Next run at {next_run}")
                 sleep(3600)  # sleeps an hour after it runs. 
