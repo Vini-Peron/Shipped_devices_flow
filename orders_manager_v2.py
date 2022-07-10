@@ -116,7 +116,6 @@ def prep_orders_list(all_orders_raw : list):  # list of order dictionaries
         for order in order_dict['orders']:
             order_number = order['order_number']
             all_order_numbers_within_range.append(order_number)
-    #logging.info(f'all orders fetched - {all_order_numbers_within_range}')  #debugger
     raw_orders_df = pd.DataFrame(all_order_numbers_within_range)
     raw_orders_df.columns = ['Order #']
     return raw_orders_df
@@ -198,7 +197,7 @@ def main():
     prep_orders_list(all_orders_raw) formats the order list cleaning order # formats that are not relevant i.e RMAs
     #TODO TBC
     """
-    from_date, to_date = get_order_date_range(4)  # range of days to filter from present day
+    from_date, to_date = get_order_date_range(4)  # range of days
     print(f"# Data Range - From: {from_date}, To: {to_date} #")
     order_stages = [0]  # 0, 1, 2, 3
     for ord_stage in order_stages:
@@ -231,7 +230,7 @@ if __name__ == "__main__":
             loop_time = get_current_datetime()
             next_run = datetime.now() + timedelta(seconds=3600)
             print(f"Clock-check at {loop_time}")
-            if str(loop_time)[0:2] == '10' or str(loop_time)[0:2] == '23':  # checks only the hour of day once an hour.
+            if str(loop_time)[0:2] == '10' or str(loop_time)[0:2] == '22':  # checks only the hour of day once an hour.
                 main()
                 print(f"Next run at {next_run}")
                 sleep(3600)  # sleeps an hour after it runs. 
@@ -242,6 +241,6 @@ if __name__ == "__main__":
         print('loop terminated')
 
 #TODO replace csv with SQL (SQLight), data dump can then originate from sql table.
-#TODO write tests!!!  (initial boilerplate implemented)
+#TODO write tests! (initial boilerplate implemented)
 #TODO package code (packgenlite?)
 #TODO write docs
